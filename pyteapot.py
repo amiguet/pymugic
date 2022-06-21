@@ -11,11 +11,10 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from pygame.locals import *
 
-useQuat = True   # set true for using quaternions, false for using y,p,r angles
+useQuat = False   # set true for using quaternions, false for using y,p,r angles
 
 types = [float if t == 'f' else int for t in 'fffffffffffffffffiiiiifi']
 
-mugic = {}
 datagram = (
     'AX', 'AY', 'AZ', # accelerometer
     'EX', 'EY', 'EZ', # Euler angles
@@ -87,7 +86,6 @@ def read_data():
 def draw(mugic):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
-    import random
     glTranslatef(0, 0.0, -7.0)
 
     drawText((-2.6, 1.8, 2), f"PyMugic ({mugic['Battery']}%, {mugic['mV']}mV)", 18)
