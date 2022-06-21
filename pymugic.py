@@ -42,11 +42,13 @@ datagram = (
 osc = OSCThreadServer()
 sock = osc.listen(address='0.0.0.0', port=port, default=True)
 mugic = None
+dirty = False
 
 @osc.address(b'/mugicdata')
 def callback(*values):
 
     global mugic
+    global dirty
 
     values = [t(v) for t, v in zip(types, values)]
 
@@ -55,8 +57,11 @@ def callback(*values):
         for k, v in zip(datagram, values)
     }
 
+    dirty = True
+
 
 def main():
+    global dirty
     video_flags = OPENGL | DOUBLEBUF
     while not mugic:
         print('Waiting for incoming data...')
@@ -73,9 +78,13 @@ def main():
         event = pygame.event.poll()
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
             break
-        draw()
-        pygame.display.flip()
-        frames += 1
+        if dirty: 
+            draw()
+            pygame.display.flip()
+            dirty = False
+            frames += 1
+        else:
+            time.sleep(.01)
     print("fps: %d" % ((frames*1000)/(pygame.time.get_ticks()-ticks)))
 
 
