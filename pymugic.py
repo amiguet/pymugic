@@ -115,7 +115,7 @@ def draw():
     if(useQuat):
         w, nx, ny, nz = [mugic[k] for k in ['QW','QX','QY','QZ']]
         [yaw, pitch , roll] = quat_to_ypr([w, nx, ny, nz])
-        drawText((-2.6, -1.8, 2), "(Computed from quaternions) Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 24)
+        drawText((-2.6, -1.8, 2), "(Using quaternions) Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 24)
         glRotatef(2 * math.acos(w) * 180.00/math.pi, -1 * nx, nz, ny)
     else:
         [yaw, pitch , roll] = [mugic[k] for k in ['EX','EY','EZ']]
