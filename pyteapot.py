@@ -2,16 +2,19 @@
 PyTeapot module for drawing rotating cube using OpenGL as per
 quaternion or yaw, pitch, roll angles received over serial port.
 
-Modified to get data from MUGIC on stdin as dumped by oscdump
+Modified to get data from MUGIC via OSC
 """
 
+import time
 import pygame
 import math
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from pygame.locals import *
+from oscpy.server import OSCThreadServer
 
-useQuat = False   # set true for using quaternions, false for using y,p,r angles
+useQuat = True   # set true for using quaternions, false for using Euler angles
+port = 4000
 
 types = [float if t == 'f' else int for t in 'fffffffffffffffffiiiiifi']
 
@@ -27,8 +30,28 @@ datagram = (
     'seqnum', # messagesequence number
 )
 
+osc = OSCThreadServer()
+sock = osc.listen(address='0.0.0.0', port=port, default=True)
+mugic = None
+
+@osc.address(b'/mugicdata')
+def callback(*values):
+
+    global mugic
+
+    values = [t(v) for t, v in zip(types, values)]
+
+    mugic = {
+        k: v
+        for k, v in zip(datagram, values)
+    }
+
+
 def main():
     video_flags = OPENGL | DOUBLEBUF
+    while not mugic:
+        print('Waiting for incoming data...')
+        time.sleep(.5)
     pygame.init()
     screen = pygame.display.set_mode((640, 480), video_flags)
     pygame.display.set_caption("PyMugic IMU orientation visualization")
@@ -40,7 +63,7 @@ def main():
         event = pygame.event.poll()
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
             break
-        draw(read_data())
+        draw()
         pygame.display.flip()
         frames += 1
     print("fps: %d" % ((frames*1000)/(pygame.time.get_ticks()-ticks)))
@@ -69,21 +92,8 @@ def init():
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
 
 
-def read_data():
-    line = input()
-    values = line.split()[3:]
-    
-    values = [t(v) for t, v in zip(types, values)]
 
-    mugic = {
-        k: v
-        for k, v in zip(datagram, values)
-    }
-
-    return mugic
-
-
-def draw(mugic):
+def draw():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
     glTranslatef(0, 0.0, -7.0)
