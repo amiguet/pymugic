@@ -18,11 +18,15 @@ from OpenGL.GLU import gluPerspective
 from pygame.locals import DOUBLEBUF, KEYDOWN, K_ESCAPE, OPENGL, QUIT
 from oscpy.server import OSCThreadServer
 
-useQuat = True   # set true for using quaternions, false for using Euler angles
+# True for using quaternions, false for using Euler angles; quaternions seems to work better
+useQuat = True   
+# Osc port
 port = 4000
-
+# GUI window size
+window_size = (1280, 960)
+# Datagram signature
 types = [float if t == 'f' else int for t in 'fffffffffffffffffiiiiifi']
-
+# Datagram structure
 datagram = (
     'AX', 'AY', 'AZ', # accelerometer
     'EX', 'EY', 'EZ', # Euler angles
@@ -30,7 +34,7 @@ datagram = (
     'MX', 'MY', 'MZ', # Magnetometer
     'QW', 'QX', 'QY', 'QZ', # Quaternions
     'Battery', 'mV', # Battery state
-    'calib_acc', 'calib_gyr', 'calib_mag', 'calib_X', # Calibration state
+    'calib_sys', 'calib_gyro', 'calib_accel', 'calib_mag', # Calibration state
     'seconds', # since last reboot
     'seqnum', # messagesequence number
 )
@@ -57,10 +61,11 @@ def main():
     while not mugic:
         print('Waiting for incoming data...')
         time.sleep(.5)
+    print('Got first datagram, launching GUI :-)')
     pygame.init()
-    pygame.display.set_mode((640, 480), video_flags)
+    pygame.display.set_mode(window_size, video_flags)
     pygame.display.set_caption("PyMugic IMU orientation visualization")
-    resizewin(640, 480)
+    resizewin(*window_size)
     init()
     frames = 0
     ticks = pygame.time.get_ticks()
@@ -103,18 +108,18 @@ def draw():
     glLoadIdentity()
     glTranslatef(0, 0.0, -7.0)
 
-    drawText((-2.6, 1.8, 2), f"PyMugic ({mugic['Battery']}%, {mugic['mV']}mV)", 18)
-    drawText((-2.6, -2, 2), "Press Escape to exit.", 16)
-    drawText((-2.6, -1.6, 2), f"Calibration: {mugic['calib_acc']}, {mugic['calib_gyr']}, {mugic['calib_mag']}, {mugic['calib_X']}", 16)
+    drawText((-2.6, 1.8, 2), f"PyMugic ({mugic['Battery']}%, {mugic['mV']}mV)", 35)
+    drawText((-2.6, -2, 2), "Press Escape to exit.", 24)
+    drawText((-2.6, -1.6, 2), f"Calibration: {mugic['calib_sys']}, {mugic['calib_gyro']}, {mugic['calib_accel']}, {mugic['calib_mag']}", 24)
 
     if(useQuat):
         w, nx, ny, nz = [mugic[k] for k in ['QW','QX','QY','QZ']]
         [yaw, pitch , roll] = quat_to_ypr([w, nx, ny, nz])
-        drawText((-2.6, -1.8, 2), "Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 16)
+        drawText((-2.6, -1.8, 2), "(Computed from quaternions) Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 24)
         glRotatef(2 * math.acos(w) * 180.00/math.pi, -1 * nx, nz, ny)
     else:
         [yaw, pitch , roll] = [mugic[k] for k in ['EX','EY','EZ']]
-        drawText((-2.6, -1.8, 2), "Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 16)
+        drawText((-2.6, -1.8, 2), "Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 24)
         glRotatef(-roll, 0.00, 0.00, 1.00)
         glRotatef(pitch, 1.00, 0.00, 0.00)
         glRotatef(yaw, 0.00, 1.00, 0.00)
