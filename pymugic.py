@@ -8,9 +8,14 @@ Modified to get data from MUGIC via OSC
 import time
 import pygame
 import math
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from pygame.locals import *
+from OpenGL.GL import (GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, GL_DEPTH_TEST, GL_LEQUAL,
+                       GL_MODELVIEW, GL_NICEST, GL_PERSPECTIVE_CORRECTION_HINT, GL_PROJECTION,
+                       GL_QUADS, GL_RGBA, GL_SMOOTH, GL_UNSIGNED_BYTE, glBegin, glClear,
+                       glClearColor, glClearDepth, glColor3f, glDepthFunc, glDrawPixels, glEnable,
+                       glEnd, glHint, glLoadIdentity, glMatrixMode, glRasterPos3d, glRotatef,
+                       glShadeModel, glTranslatef, glVertex3f, glViewport)
+from OpenGL.GLU import gluPerspective
+from pygame.locals import DOUBLEBUF, KEYDOWN, K_ESCAPE, OPENGL, QUIT
 from oscpy.server import OSCThreadServer
 
 useQuat = True   # set true for using quaternions, false for using Euler angles
