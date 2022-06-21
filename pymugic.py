@@ -58,7 +58,7 @@ def main():
         print('Waiting for incoming data...')
         time.sleep(.5)
     pygame.init()
-    screen = pygame.display.set_mode((640, 480), video_flags)
+    pygame.display.set_mode((640, 480), video_flags)
     pygame.display.set_caption("PyMugic IMU orientation visualization")
     resizewin(640, 480)
     init()
