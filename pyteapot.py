@@ -1,6 +1,8 @@
 """
 PyTeapot module for drawing rotating cube using OpenGL as per
 quaternion or yaw, pitch, roll angles received over serial port.
+
+Modified to get data from MUGIC on stdin as dumped by oscdump
 """
 
 import pygame
@@ -9,26 +11,28 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from pygame.locals import *
 
-useSerial = False # set true for using serial for data transmission, false for wifi
-useQuat = False   # set true for using quaternions, false for using y,p,r angles
+useQuat = True   # set true for using quaternions, false for using y,p,r angles
 
-if(useSerial):
-    import serial
-    ser = serial.Serial('/dev/ttyUSB0', 38400)
-else:
-    import socket
+types = [float if t == 'f' else int for t in 'fffffffffffffffffiiiiifi']
 
-    UDP_IP = "0.0.0.0"
-    UDP_PORT = 5005
-    sock = socket.socket(socket.AF_INET, # Internet
-                         socket.SOCK_DGRAM) # UDP
-    sock.bind((UDP_IP, UDP_PORT))
+mugic = {}
+datagram = (
+    'AX', 'AY', 'AZ', # accelerometer
+    'EX', 'EY', 'EZ', # Euler angles
+    'GX', 'GY', 'GZ', # Gyrometer
+    'MX', 'MY', 'MZ', # Magnetometer
+    'QW', 'QX', 'QY', 'QZ', # Quaternions
+    'Battery', 'mV', # Battery state
+    'calib_acc', 'calib_gyr', 'calib_mag', 'calib_X', # Calibration state
+    'seconds', # since last reboot
+    'seqnum', # messagesequence number
+)
 
 def main():
     video_flags = OPENGL | DOUBLEBUF
     pygame.init()
     screen = pygame.display.set_mode((640, 480), video_flags)
-    pygame.display.set_caption("PyTeapot IMU orientation visualization")
+    pygame.display.set_caption("PyMugic IMU orientation visualization")
     resizewin(640, 480)
     init()
     frames = 0
@@ -37,19 +41,10 @@ def main():
         event = pygame.event.poll()
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
             break
-        if(useQuat):
-            [w, nx, ny, nz] = read_data()
-        else:
-            [yaw, pitch, roll] = read_data()
-        if(useQuat):
-            draw(w, nx, ny, nz)
-        else:
-            draw(1, yaw, pitch, roll)
+        draw(read_data())
         pygame.display.flip()
         frames += 1
     print("fps: %d" % ((frames*1000)/(pygame.time.get_ticks()-ticks)))
-    if(useSerial):
-        ser.close()
 
 
 def resizewin(width, height):
@@ -75,73 +70,44 @@ def init():
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
 
 
-def cleanSerialBegin():
-    if(useQuat):
-        try:
-            line = ser.readline().decode('UTF-8').replace('\n', '')
-            w = float(line.split('w')[1])
-            nx = float(line.split('a')[1])
-            ny = float(line.split('b')[1])
-            nz = float(line.split('c')[1])
-        except Exception:
-            pass
-    else:
-        try:
-            line = ser.readline().decode('UTF-8').replace('\n', '')
-            yaw = float(line.split('y')[1])
-            pitch = float(line.split('p')[1])
-            roll = float(line.split('r')[1])
-        except Exception:
-            pass
-
-
 def read_data():
-    if(useSerial):
-        ser.reset_input_buffer()
-        cleanSerialBegin()
-        line = ser.readline().decode('UTF-8').replace('\n', '')
-        print(line)
-    else:
-        # Waiting for data from udp port 5005
-        data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-        line = data.decode('UTF-8').replace('\n', '')
-        print(line)
-                
-    if(useQuat):
-        w = float(line.split('w')[1])
-        nx = float(line.split('a')[1])
-        ny = float(line.split('b')[1])
-        nz = float(line.split('c')[1])
-        return [w, nx, ny, nz]
-    else:
-        yaw = float(line.split('y')[1])
-        pitch = float(line.split('p')[1])
-        roll = float(line.split('r')[1])
-        return [yaw, pitch, roll]
+    line = input()
+    values = line.split()[3:]
+    
+    values = [t(v) for t, v in zip(types, values)]
+
+    mugic = {
+        k: v
+        for k, v in zip(datagram, values)
+    }
+
+    return mugic
 
 
-def draw(w, nx, ny, nz):
+def draw(mugic):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
+    import random
     glTranslatef(0, 0.0, -7.0)
 
-    drawText((-2.6, 1.8, 2), "PyTeapot", 18)
-    drawText((-2.6, 1.6, 2), "Module to visualize quaternion or Euler angles data", 16)
+    drawText((-2.6, 1.8, 2), f"PyMugic ({mugic['Battery']}%, {mugic['mV']}mV)", 18)
     drawText((-2.6, -2, 2), "Press Escape to exit.", 16)
+    drawText((-2.6, -1.6, 2), f"Calibration: {mugic['calib_acc']}, {mugic['calib_gyr']}, {mugic['calib_mag']}, {mugic['calib_X']}", 16)
 
     if(useQuat):
+        w, nx, ny, nz = [mugic[k] for k in ['QW','QX','QY','QZ']]
         [yaw, pitch , roll] = quat_to_ypr([w, nx, ny, nz])
         drawText((-2.6, -1.8, 2), "Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 16)
         glRotatef(2 * math.acos(w) * 180.00/math.pi, -1 * nx, nz, ny)
     else:
-        yaw = nx
-        pitch = ny
-        roll = nz
+        [yaw, pitch , roll] = [mugic[k] for k in ['EX','EY','EZ']]
         drawText((-2.6, -1.8, 2), "Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 16)
         glRotatef(-roll, 0.00, 0.00, 1.00)
         glRotatef(pitch, 1.00, 0.00, 0.00)
         glRotatef(yaw, 0.00, 1.00, 0.00)
 
+    # trying to represent acceleration somehow...
+    # glTranslatef(0+mugic['AX']/10, 0.0+mugic['AY']/10, mugic['AZ']/10)
     glBegin(GL_QUADS)
     glColor3f(0.0, 1.0, 0.0)
     glVertex3f(1.0, 0.2, -1.0)
