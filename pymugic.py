@@ -15,10 +15,11 @@ from OpenGL.GL import (GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, GL_DEPTH_TEST, 
                        glEnd, glHint, glLoadIdentity, glMatrixMode, glRasterPos3d, glRotatef,
                        glShadeModel, glTranslatef, glVertex3f, glViewport)
 from OpenGL.GLU import gluPerspective
-from pygame.locals import DOUBLEBUF, KEYDOWN, K_ESCAPE, OPENGL, QUIT
+from pygame.locals import DOUBLEBUF, KEYDOWN, K_ESCAPE, OPENGL, QUIT, K_a, K_s
 from oscpy.server import OSCThreadServer
 
-# True for using quaternions, false for using Euler angles; quaternions seems to work better
+# True for using quaternions, false for using Euler angles; quaternions seems to work better.
+# In addition, scene rotation with 'a' and 's' keys has only been implemented for quaternions.
 useQuat = True   
 # Osc port
 port = 4000
@@ -43,6 +44,7 @@ osc = OSCThreadServer()
 sock = osc.listen(address='0.0.0.0', port=port, default=True)
 mugic = None
 dirty = False
+rotation = 0
 
 @osc.address(b'/mugicdata')
 def callback(*values):
@@ -62,6 +64,7 @@ def callback(*values):
 
 def main():
     global dirty
+    global rotation
     video_flags = OPENGL | DOUBLEBUF
     while not mugic:
         print('Waiting for incoming data...')
@@ -78,6 +81,13 @@ def main():
         event = pygame.event.poll()
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
             break
+        state = pygame.key.get_pressed()
+        if state[K_a]:
+            rotation = (rotation - 1) % 360
+            dirty = True
+        elif state[K_s]:
+            rotation = (rotation + 1) % 360
+            dirty = True
         if dirty: 
             draw()
             pygame.display.flip()
@@ -125,6 +135,7 @@ def draw():
         w, nx, ny, nz = [mugic[k] for k in ['QW','QX','QY','QZ']]
         [yaw, pitch , roll] = quat_to_ypr([w, nx, ny, nz])
         drawText((-2.6, -1.8, 2), "(Using quaternions) Yaw: %f, Pitch: %f, Roll: %f" %(yaw, pitch, roll), 24)
+        glRotatef(rotation, 0, 1, 0)
         glRotatef(2 * math.acos(w) * 180.00/math.pi, -1 * nx, nz, ny)
     else:
         [yaw, pitch , roll] = [mugic[k] for k in ['EX','EY','EZ']]
