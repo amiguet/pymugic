@@ -65,7 +65,7 @@ def main():
     video_flags = OPENGL | DOUBLEBUF
     while not mugic:
         print('Waiting for incoming data...')
-        time.sleep(.5)
+        time.sleep(.1)
     print('Got first datagram, launching GUI :-)')
     pygame.init()
     pygame.display.set_mode(window_size, video_flags)
@@ -133,8 +133,9 @@ def draw():
         glRotatef(pitch, 1.00, 0.00, 0.00)
         glRotatef(yaw, 0.00, 1.00, 0.00)
 
-    # trying to represent acceleration somehow...
-    # glTranslatef(0+mugic['AX']/10, 0.0+mugic['AY']/10, mugic['AZ']/10)
+    # Accelerometer data
+    glTranslatef(-mugic['AX']/50, mugic['AZ']/50, mugic['AY']/50)
+
     glBegin(GL_QUADS)
     glColor3f(0.0, 1.0, 0.0)
     glVertex3f(1.0, 0.2, -1.0)
