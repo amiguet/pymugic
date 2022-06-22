@@ -25,3 +25,6 @@ To get it working, you'll probably need at least some basic knowledge of the pyt
     ```
     $ python pymugic.py
     ```
+
+**Note** Please make sure you are using python 3.x. Dependending on your system you might need to replace
+`python` with `python3` or `py3` and maybe `pip` with `pip3`.
